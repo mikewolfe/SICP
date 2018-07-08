@@ -430,7 +430,7 @@
       (let ((t2 (first-term L)))
         (adjoin-term
           (make-term (+ (order t1) (order t2))
-                     (mul (coeff t2) (coeff t2)))
+                     (mul (coeff t1) (coeff t2)))
           (mul-term-by-all-terms t1 (rest-terms L))))))
   (define (add-poly p1 p2)
     (if (same-variable? (variable p1) (variable p2))

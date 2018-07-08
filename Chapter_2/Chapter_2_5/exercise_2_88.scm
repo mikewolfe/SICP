@@ -1,19 +1,21 @@
-; Exercise 2.87 Install =zero? for polynomials in the generic arithmetic
-; package. This will allow adjoin-term to work for polynomials with coefficients
-; that are themselves polynomials.
-
+; Exercise 2.88. Extend the polynomial system to include subtraction of
+; polynomials. (Hint: You may find it helpful to define a generic negation
+; operation.)
 
 ; Copy over the generic arithmetic package from before
 
 ; Rolled back the tag handling code to before we had it use numbers
 ; Tag handling code:
 (define (attach-tag type-tag contents)
+  ; adds a tag to a list so that car is the tag and cdr is the contents
   (cons type-tag contents))
 (define (type-tag datum)
+  ; returns the tag of a list. If tag doesn't exist returns an error
   (if (pair? datum)
     (car datum)
     (error "Bad tagged datum -- TYPE-TAG" datum)))
 (define (contents datum)
+  ; returns the contents of a tagged list. If not tagged return an error
   (if (pair? datum)
     (cdr datum)
     (error "Bad tagged datum -- CONTENTS" datum)))
@@ -30,6 +32,7 @@
 
 ; adding a helper function to raise all types to the highest type
 (define (find-highest-level args)
+  ; given a list of args, find the arg with the highest level
   (define (iter args highest-level)
     (if (null? args)
         highest-level
@@ -440,7 +443,7 @@
       (let ((t2 (first-term L)))
         (adjoin-term
           (make-term (+ (order t1) (order t2))
-                     (mul (coeff t2) (coeff t2)))
+                     (mul (coeff t1) (coeff t2)))
           (mul-term-by-all-terms t1 (rest-terms L))))))
   (define (add-poly p1 p2)
     (if (same-variable? (variable p1) (variable p2))
