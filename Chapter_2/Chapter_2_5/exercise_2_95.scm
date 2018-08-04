@@ -1,19 +1,18 @@
-; Exercise 2.94. Using div-terms, implement the procedure remainder-terms
-; and use this to define gcd-terms as above. Now write a procedure gcd-poly that
-; computes the polynomial GCD of two polys. (The procedure should signal an
-; error if the two polys are not in the same variable.) Install in the system
-; a generic operation greatest-common-divisor that reduces to gcd-poly for 
-; polynomials and to ordinary gcd for ordinary numbers. As a test, try
+; Exercise 2.95. Define P1, P2, P3 to be the polynomials
 ;
+; P1: x^2 - 2x + 1,
+; P2: 11x^2 + 7,
+; P3: 13x + 5.
 ;
-;(define p1 (make-polynomial
-;'x '((4 1) (3 -1) (2 -2) (1 2))))
-;(define p2 (make-polynomial 'x '((3 1) (1 -1)))) (greatest-common-divisor p1 p2);
-;
-; and check your result by hand.
+; Now define Q1 to be the product of P1 and P2 and Q2 to be the product of
+; P1 and P3 and use greatest-common-divisor from the last exercise to compute
+; the GCD of Q1 and Q2. Note that the answer is not the same as P1. This example
+; introduces noninteger operations into the computation, causing difficulties
+; with the GCD algorithm. To understand what is happening, try tracing gcd-terms
+; while computing the GCD or try performing the division by hand.
 
 
-;; COPY COMPLETE SYSTEM FROM 2.93 INCLUDING COMMENTS AND TESTS
+;; COPY COMPLETE SYSTEM FROM 2.94 INCLUDING COMMENTS AND TESTS
 ; Once again, I am following along with the changes suggested here and just
 ; commenting through how everything works rather than coming up with the 
 ; functions completely on my own:
@@ -250,8 +249,9 @@
        (lambda (x y) (tag (- x y))))
   (put 'mul '(integer integer)
        (lambda (x y) (tag (* x y))))
+  ; make sure division deals with rationals properly
   (put 'div '(integer integer)
-       (lambda (x y) (tag (/ x y))))
+       (lambda (x y) (div (make-real x) (make-real y))))
   ; make sure we are making an integer with an integer
   (put 'make 'integer
        (lambda (x) (if (integer? x)
@@ -306,13 +306,6 @@
           (else (error
                   "numerator and denominator must both be integer or polynomial types"
                   (list n d)))))
-;  (define (make-rat n d)
-;    ; add code to check that rational is made from integers
-;    (if (and (integer? n) (integer? d))
-;        (let ((g (gcd n d)))
-;            (cons (/ n g) (/ d g)))
-;        (error "non-integer numerator or denominator"
-;               (list n d))))
   (define (add-rat x y)
     (make-rat (add (mul (numer x) (denom y))
                  (mul (numer y) (denom x)))
@@ -1002,23 +995,23 @@
         (if (> (order t2) (order t1))
             (list (the-empty-termlist) L1)
             ; otherwise divide coefficient 1 by coefficient 2
-            (let ((new-c (div (coeff t1) (coeff t2)))
+            (let* ((new-c (div (coeff t1) (coeff t2)))
                   ; subtract get division of orders
-                  (new-o (- (order t1) (order t2)))) 
+                  (new-o (- (order t1) (order t2)))
+                  (new-t (make-term new-o new-c))
               ; then do long division by recursively multiplying the new 
               ; coefficient by the divisor, subtracting it from the dividend
-              ; and dividing the dividend by that result
-              (let ((rest-of-result
-                      (div-terms
-                        (add-terms L1 
-                                   (negate-terms
-                                     (mul-term-by-all-terms (make-term new-o new-c) 
-                                                             L2)))
-                        L2)))
+              ; and dividing the dividend by that result 
+                  (rest-of-result
+                    (div-terms
+                      (add-terms L1 
+                                 (negate-terms
+                                   (mul-term-by-all-terms new-t L2)))
+                      L2)))
                 ; return a list of the final result and remainder
-                (list (adjoin-term (make-term new-o new-c)
+                (list (adjoin-term new-t
                                    (car rest-of-result))
-                      (cadr rest-of-result))))))))
+                      (cadr rest-of-result)))))))
 
   ;;Subtraction
   (define (sub-poly p1 p2)
@@ -1026,13 +1019,14 @@
 
   ;; GCD calculation
   (define (remainder-terms L1 L2)
+    ; just pull out the remainder from div-terms
     (cadr (div-terms L1 L2)))
 
   (define (gcd-terms a b)
     (if (empty-termlist? b)
         a
         (gcd-terms b (remainder-terms a b))))
-
+    
   (define (gcd-poly p1 p2)
     (make-poly (select-variable-from-polys p1 p2)
                (gcd-terms (term-list p1) (term-list p2))))
@@ -1807,3 +1801,35 @@ dvr
 (greatest-common-divisor (car (div p1 dvr))
                          (car (div p2 dvr)))
 
+; Tests for 2.95
+(define p1 (make-polynomial-from-coeffs 'x
+                                        (list (make-integer 1)
+                                              (make-integer -2)
+                                              (make-integer 1))))
+(define p2 (make-polynomial-from-coeffs 'x
+                                        (list (make-integer 11)
+                                              zero
+                                              (make-integer 7))))
+
+(define p3 (make-polynomial-from-coeffs 'x
+                                        (list (make-integer 13)
+                                              (make-integer 5))))
+
+p1
+p2
+p3
+(define q1 (mul p1 p2))
+(define q2 (mul p1 p3))
+;(greatest-common-divisor p1 p2)
+q1
+q2
+(greatest-common-divisor q1 q2)
+
+;; tracing greatest-common-divisor q1 q2
+;gcd-terms:
+;(dense-terms (integer . 11) (integer . -22) (integer . 18) (integer . -14) (integer . 7))
+;(dense-terms (integer . 13) (integer . -21) (integer . 3) (integer . 5)))
+;
+;  div-terms:
+;  intoduction of rational numbers in the division between terms. Doesn't reduce
+;  properly
